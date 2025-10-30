@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音のデジタル化シミュレーター</title>
+    
+
+<script src="https://cdn.tailwindcss.com"></script>
+    
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Noto Sans JPを優先しつつ、Interも使えるように設定 */
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+        }
+        /* スライダーの見た目をカスタム */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0; /* bg-gray-300 */
+            border-radius: 9999px; /* rounded-full */
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #4f46e5; /* bg-indigo-600 */
+            border-radius: 9999px; /* rounded-full */
+            cursor: pointer;
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #4f46e5; /* bg-indigo-600 */
+            border-radius: 9999px; /* rounded-full */
+            cursor: pointer;
+        }
+
+        /* トグルスイッチのスタイル */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+            margin-right: 10px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider-round {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            -webkit-transition: .4s;
+            transition: .4s;
+            border-radius: 20px;
+        }
+
+        .slider-round:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            -webkit-transition: .4s;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider-round {
+            background-color: #4f46e5; /* bg-indigo-600 */
+        }
+
+        input:focus + .slider-round {
+            box-shadow: 0 0 1px #4f46e5;
+        }
+
+        input:checked + .slider-round:before {
+            -webkit-transform: translateX(20px);
+            -ms-transform: translateX(20px);
+            transform: translateX(20px);
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <h1 class="text-2xl md:text-3xl font-bold text-center text-gray-800 mb-6">
+            PCM(パルス符号変調Pulse Code Modulation）シミュレータ
+        </h1>
+        <!-- (2の補数 表現) の表記を削除 -->
+        <!-- <p class="text-center text-gray-600 mb-6">(2の補数 表現)</p> -->
+
+        <div class="flex flex-col lg:flex-row gap-6">
+
+            
+
+<div class="lg:w-1/3 bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-bold mb-4 text-indigo-700">設定を変更して遊んでみよう</h2>
+                
+                
+
+<div class="mb-6">
+                    <label for="sampling-slider" class="block font-bold text-gray-700">
+                        Step 1: 標本化 (Sampling)
+                    </label>
+                    <p class="text-sm text-gray-600 mb-2">
+                        波をスキャンする細かさ（標本化周波数）を決めます。値が大きいほど、細かくスキャンします。
+                    </p>
+                    <input type="range" id="sampling-slider" min="5" max="100" value="20" class="w-full">
+                    <div class="text-center text-indigo-600 font-semibold mt-2" id="sampling-label">20 サンプル</div>
+                </div>
+
+                
+
+<div class="mb-6">
+                    <label for="bits-slider" class="block font-bold text-gray-700">
+                        Step 2: 量子化 (Quantization)
+                    </label>
+                    <p class="text-sm text-gray-600 mb-2">
+                        波の高さを表現する精度（量子化ビット数）を決めます。ビット数が多いほど、高さを細かく表現できます。
+                    </p>
+                    <input type="range" id="bits-slider" min="1" max="8" value="3" class="w-full">
+                    <div class="text-center text-indigo-600 font-semibold mt-2" id="bits-label">3 ビット (8 段階)</div>
+                </div>
+
+                
+
+<div class="mb-6">
+                    <h3 class="font-bold text-gray-700 mb-3">表示オプション</h3>
+                    <div class="flex items-center mb-2">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggle-analog-wave" checked>
+                            <span class="slider-round"></span>
+                        </label>
+                        <span class="text-sm text-gray-700">元のアナログ波</span>
+                    </div>
+                    <div class="flex items-center mb-2">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggle-x-projection" checked>
+                            <span class="slider-round"></span>
+                        </label>
+                        <span class="text-sm text-gray-700">標本点のX軸への射影</span>
+                    </div>
+                    <div class="flex items-center mb-2">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggle-y-projection" checked>
+                            <span class="slider-round"></span>
+                        </label>
+                        <span class="text-sm text-gray-700">量子化レベルのY軸への射影</span>
+                    </div>
+                    <div class="flex items-center mb-2">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggle-quantized-wave" checked>
+                            <span class="slider-round"></span>
+                        </label>
+                        <span class="text-sm text-gray-700">デジタル化された波形（階段）</span>
+                    </div>
+                </div>
+
+                
+
+<div>
+                    <h3 class="font-bold text-gray-700 mb-2">グラフの見方</h3>
+                    <ul class="space-y-2 text-sm">
+                        <li class="flex items-center">
+                            <span class="w-4 h-1 bg-blue-500 inline-block mr-2 rounded"></span>
+                            元のアナログ波 (表示オプションでON/OFF)
+                        </li>
+                        <li class="flex items-center">
+                            <span class="w-4 h-1 bg-red-500 inline-block mr-2 rounded"></span>
+                            デジタル化された波形 (表示オプションでON/OFF)
+                        </li>
+                        <!-- <li class="flex items-center">
+                            <span class="w-4 h-0.5 border-t border-dashed border-gray-400 inline-block mr-2"></span>
+                            量子化レベル（高さの目盛り）
+                        </li> -->
+                        <li class="flex items-center">
+                            <span class="w-2 h-2 bg-red-500 inline-block mr-2 rounded-full"></span>
+                            標本化された点（スキャンした点）
+                        </li>
+                         <li class="flex items-center">
+                            <span class="w-px h-3 border-l border-dashed border-red-400 inline-block mx-1 mr-2"></span>
+                            標本点のX軸への射影 (表示オプションでON/OFF)
+                        </li>
+                         <li class="flex items-center">
+                            <span class="w-4 h-0.5 border-t border-dashed border-red-400 inline-block mr-2"></span>
+                            量子化レベルのY軸への射影 (表示オプションでON/OFF)
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            
+
+<div class="lg:w-2/3 bg-white p-6 rounded-lg shadow-md">
+                <div class="aspect-w-2 aspect-h-1 w-full">
+                    
+
+<canvas id="wave-canvas" class="w-full h-full"></canvas>
+                </div>
+                
+                
+
+<div class="mt-6">
+                    <h2 class="text-xl font-bold mb-2 text-indigo-700">Step 3: 符号化 (Encoding)</h2>
+                    <p class="text-sm text-gray-600 mb-3">
+                        量子化された各点の「高さレベル」を、0と1の2進数コードに変換します。これがデジタルデータです。
+                    </p>
+                    <div class="bg-gray-100 p-4 rounded-md">
+                        <p class="font-mono text-sm text-gray-800 break-words" id="binary-output"></p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const canvas = document.getElementById('wave-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            const samplingSlider = document.getElementById('sampling-slider');
+            const bitsSlider = document.getElementById('bits-slider');
+            const samplingLabel = document.getElementById('sampling-label');
+            const bitsLabel = document.getElementById('bits-label');
+            const binaryOutput = document.getElementById('binary-output');
+
+            // 表示オプションのチェックボックス
+            const toggleAnalogWave = document.getElementById('toggle-analog-wave');
+            const toggleXProjection = document.getElementById('toggle-x-projection');
+            const toggleYProjection = document.getElementById('toggle-y-projection');
+            const toggleQuantizedWave = document.getElementById('toggle-quantized-wave');
+
+            let padding = 40; // 軸ラベルのための余白
+
+            // 元のアナログ波を定義 (2つのサイン波を合成)
+            // 戻り値の範囲を 0.0 〜 1.0 に変更
+            function getAnalogValue(t) {
+                // tは 0 から 1 の範囲 (キャンバスの左端から右端)
+                const freq1 = 2;
+                const freq2 = 7;
+                // 振幅を調整 (0.35 + 0.15 = 0.5)
+                const amp1 = 0.35;
+                const amp2 = 0.15;
+                // 0.5 を中心に振幅させる (0.0 〜 1.0 の範囲に収める)
+                return 0.5 + Math.sin(t * freq1 * 2 * Math.PI) * amp1 + Math.sin(t * freq2 * 2 * Math.PI) * amp2;
+            }
+
+            // キャンバスの描画
+            function draw() {
+                // キャンバスのサイズを親要素に合わせる
+                const rect = canvas.parentElement.getBoundingClientRect();
+                canvas.width = rect.width;
+                canvas.height = rect.height;
+
+                // グラフの描画領域
+                const graphWidth = canvas.width - padding * 2;
+                // const graphHeight = canvas.height - padding * 2; // 削除
+                
+                // Y軸のレベル座標を計算
+                const y_px_level_max = padding; // level (N-1) の中心
+                const y_px_level_min = canvas.height - padding; // level 0 の中心 (X軸)
+                const graphHeight_levels = y_px_level_min - y_px_level_max; // レベル間の総高さ
+
+                // 現在のスライダーの値を取得
+                const numSamples = parseInt(samplingSlider.value);
+                const numBits = parseInt(bitsSlider.value);
+                const numLevels = Math.pow(2, numBits);
+                
+                // レベル間のY座標（ピクセル）
+                const levelHeight_px = (numLevels > 1) ? graphHeight_levels / (numLevels - 1) : 0;
+
+                // ラベルを更新
+                samplingLabel.textContent = `${numSamples} サンプル`;
+                bitsLabel.textContent = `${numBits} ビット (${numLevels} 段階)`;
+
+                // キャンバスをクリア
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // --- 軸の描画 ---
+                ctx.beginPath();
+                ctx.strokeStyle = '#9ca3af'; // text-gray-400
+                ctx.lineWidth = 1;
+                // Y軸
+                ctx.moveTo(padding, padding / 2);
+                ctx.lineTo(padding, canvas.height - padding); // 下端 (X軸) まで
+                // X軸 (下端に描画、level 0 の中心と一致)
+                ctx.moveTo(padding, y_px_level_min);
+                ctx.lineTo(canvas.width - padding / 2, y_px_level_min);
+                ctx.stroke();
+                
+                // 軸ラベル
+                ctx.fillStyle = '#4b5563'; // text-gray-600
+                ctx.font = '12px Inter';
+                ctx.textAlign = 'center';
+                // X軸ラベル (グラフの下部に配置)
+                ctx.fillText('時間 (s)', padding + graphWidth / 2, canvas.height - padding / 4);
+                // Y軸ラベル
+                ctx.save();
+                ctx.translate(padding / 2, padding + graphHeight_levels / 2); // Y軸ラベルをグラフ領域の中央に
+                ctx.rotate(-Math.PI / 2);
+                ctx.fillText('電圧 (V)', 0, 0);
+                ctx.restore();
+
+                // --- Y軸の目盛り (オフセット・バイナリ) ---
+                ctx.beginPath();
+                ctx.strokeStyle = '#9ca3af'; // text-gray-400
+                ctx.lineWidth = 1;
+                for (let level = 0; level < numLevels; level++) { // i は 0 から numLevels-1 (オフセットレベル)
+                    // レベルの中心のYピクセル座標
+                    const y_px_center = y_px_level_min - level * levelHeight_px;
+                    
+                    ctx.moveTo(padding - 5, y_px_center); // 5pxの短い線を引く
+                    ctx.lineTo(padding, y_px_center);
+                }
+                ctx.stroke();
+
+
+                // --- 1. 元のアナログ波を描画 (青色) (表示オプションで制御) ---
+                if (toggleAnalogWave.checked) {
+                    ctx.beginPath();
+                    ctx.strokeStyle = '#3b82f6'; // bg-blue-500
+                    ctx.lineWidth = 3;
+                    for (let x_px = 0; x_px <= graphWidth; x_px++) {
+                        const t = x_px / graphWidth; // 時間 (0 to 1)
+                        const y_val = getAnalogValue(t); // 電圧 (0 to 1)
+                        
+                        // Y座標に変換 (0.0 -> level 0, 1.0 -> level N-1)
+                        const y_px = y_px_level_min - y_val * graphHeight_levels;
+
+                        if (x_px === 0) {
+                            ctx.moveTo(padding + x_px, y_px);
+                        } else {
+                            ctx.lineTo(padding + x_px, y_px);
+                        }
+                    }
+                    ctx.stroke();
+                }
+
+                // --- 2. 量子化レベルを描画 (グレーの破線) ---
+                // (levelHeight_px が 0 の場合 (1bit) は描画しない)
+                /* if (levelHeight_px > 0) {
+                    ctx.beginPath();
+                    ctx.strokeStyle = '#d1d5db'; // text-gray-300
+                    ctx.lineWidth = 1;
+                    ctx.setLineDash([4, 4]); // 破線
+                    // レベルの境界線を引く
+                    for (let level = 0; level < numLevels; level++) {
+                        // 各レベルの中心から +/- 0.5 * levelHeight_px の位置に境界線を引く
+                        const y_px_center = y_px_level_min - level * levelHeight_px;
+                        const y_px_boundary_top = y_px_center - levelHeight_px * 0.5;
+                        ctx.moveTo(padding, y_px_boundary_top);
+                        ctx.lineTo(padding + graphWidth, y_px_boundary_top);
+                    }
+                    // X軸 (level 0 の下限境界) も引く
+                    const y_px_boundary_bottom_level0 = y_px_level_min + levelHeight_px * 0.5;
+                    ctx.moveTo(padding, y_px_boundary_bottom_level0);
+                    ctx.lineTo(padding + graphWidth, y_px_boundary_bottom_level0);
+                    ctx.stroke();
+                    ctx.setLineDash([]); // 破線をリセット
+                }
+                */
+
+
+                // --- 2b. 量子化レベルのY軸ラベルを描画 (オフセット・バイナリ) ---
+                if (numBits <= 5) { // 5ビット (32段階) 以下なら表示
+                    ctx.fillStyle = '#6b7280'; // text-gray-500
+                    ctx.font = '10px Inter';
+                    ctx.textAlign = 'right';
+                    for (let level = 0; level < numLevels; level++) { // level は 0 から numLevels-1
+                        // レベルの中心のYピクセル座標
+                        const y_px_center = y_px_level_min - level * levelHeight_px;
+                        
+                        // オフセット・バイナリコードに変換 (level をそのまま使う)
+                        const binaryString = level.toString(2).padStart(numBits, '0');
+                        
+                        // Y軸の左側に描画
+                        ctx.fillText(binaryString, padding - 8, y_px_center + 3); // +3 は上下中央揃えのための微調整
+                    }
+                }
+
+                // --- 3. 標本化 & 量子化 & 符号化 ---
+                const sampleStep_px = graphWidth / (numSamples - 1);
+                let digitalPoints = []; // 量子化された点の座標を保持
+                let binaryStrings = [];
+                
+                // Y軸射影用の準備
+                // (ループ内で処理するように変更)
+                const dashPattern = [2, 3];
+                const dashLength = dashPattern.reduce((a, b) => a + b, 0); // 5
+                const yProjectionDashOffset = padding % dashLength; // Y軸(x=padding)で位相を揃える
+
+                for (let i = 0; i < numSamples; i++) {
+                    const x_px = padding + i * sampleStep_px;
+                    const t = (i * sampleStep_px) / graphWidth;
+                    
+                    // --- 標本化 (Sampling) ---
+                    const analogY_val = getAnalogValue(t); // (0 to 1)
+                    // Y座標に変換
+                    const analogY_px = y_px_level_min - analogY_val * graphHeight_levels;
+                    
+                    // 標本化の点を描画 (赤丸)
+                    ctx.fillStyle = '#ef4444'; // bg-red-500
+                    ctx.beginPath();
+                    ctx.arc(x_px, analogY_px, 4, 0, 2 * Math.PI);
+                    ctx.fill();
+
+                    // --- 標本化の点からX軸への点線 (表示オプションで制御) ---
+                    if (toggleXProjection.checked) {
+                        ctx.beginPath();
+                        ctx.strokeStyle = 'rgba(239, 68, 68, 0.6)'; // bg-red-500 の半透明
+                        ctx.lineWidth = 1;
+                        ctx.setLineDash([2, 3]); // 細かい点線
+                        ctx.moveTo(x_px, analogY_px); // 標本化の点 (赤丸) の中心から
+                        ctx.lineTo(x_px, y_px_level_min); // X軸 (level 0 の中心) まで
+                        ctx.stroke();
+                        ctx.setLineDash([]); // 点線をリセット
+                    }
+
+                    // --- 量子化 (Quantization) ---
+                    // 電圧値 (0 to 1) を オフセットレベル (0 to numLevels-1) に変換
+                    const level_float = analogY_val * (numLevels - 1); // 0.0 から (N-1).0 の範囲
+                    let level = Math.round(level_float); // 最も近いレベル (0 to N-1) に丸める
+
+                    // 量子化された中心Y座標を計算
+                    const quantizedY_px = y_px_level_min - level * levelHeight_px;
+                    
+                    digitalPoints.push({ x: x_px, y: quantizedY_px });
+
+                    // --- Y軸への射影（新しい水平ステップの開始点から） ---
+                    if (toggleYProjection.checked) {
+                        if (i === 0 || (i > 0 && quantizedY_px !== digitalPoints[i-1].y)) {
+                            // 最初の点、またはYレベルが変わった場合
+                            ctx.beginPath(); 
+                            ctx.strokeStyle = 'rgba(239, 68, 68, 0.6)'; // bg-red-500 の半透明
+                            ctx.lineWidth = 1;
+                            
+                            // Y軸 (x=padding) で点線パターンが開始するようにオフセットを調整
+                            ctx.setLineDash(dashPattern);
+                            ctx.lineDashOffset = yProjectionDashOffset;
+                            
+                            ctx.moveTo(x_px, quantizedY_px); // ステップの開始点
+                            ctx.lineTo(padding, quantizedY_px); // Y軸まで
+                            ctx.stroke();
+                            
+                            ctx.lineDashOffset = 0; // オフセットをリセット
+                            ctx.setLineDash([]); // 点線をリセット
+                        }
+                    }
+
+                    // --- 符号化 (Encoding) ---
+                    // オフセットレベル (level) を 2進数コードに変換
+                    let binaryString = level.toString(2); 
+                    binaryString = binaryString.padStart(numBits, '0');
+                    binaryStrings.push(binaryString);
+                }
+                
+                // Y軸射影の描画実行 (ループ内に移動)
+
+
+                // --- デジタル化された波形（階段状）を描画 (表示オプションで制御) ---
+                if (toggleQuantizedWave.checked) {
+                    ctx.beginPath(); // 階段波形用
+                    ctx.strokeStyle = '#ef4444'; // bg-red-500
+                    ctx.lineWidth = 2;
+
+                    if (digitalPoints.length > 0) {
+                        // 最初の量子化レベルから描画を開始
+                        let currentY_px = digitalPoints[0].y;
+                        ctx.moveTo(padding, currentY_px); // グラフの左端から最初の量子化レベルへ
+                        ctx.lineTo(digitalPoints[0].x, currentY_px); // 最初のサンプル点まで水平に
+
+                        for (let i = 0; i < digitalPoints.length; i++) {
+                            const curr = digitalPoints[i];
+                            
+                            // 現在の量子化レベルで次のサンプル点まで水平に線を引く
+                            let nextX_px = (i + 1 < digitalPoints.length) ? digitalPoints[i+1].x : padding + graphWidth;
+                            ctx.lineTo(nextX_px, curr.y);
+
+                            // 次のサンプル点の量子化レベルに垂直に移動する（最後の点を除く）
+                            if (i + 1 < digitalPoints.length) {
+                                const nextY_px = digitalPoints[i+1].y;
+                                ctx.lineTo(nextX_px, nextY_px);
+                            }
+                        }
+                    }
+                    ctx.stroke(); // 階段波形の描画
+                }
+
+                // 符号化データを表示
+                binaryOutput.textContent = binaryStrings.join(' ');
+            }
+
+            // イベントリスナー
+            samplingSlider.addEventListener('input', draw);
+            bitsSlider.addEventListener('input', draw);
+            toggleAnalogWave.addEventListener('change', draw);
+            toggleXProjection.addEventListener('change', draw);
+            toggleYProjection.addEventListener('change', draw);
+            toggleQuantizedWave.addEventListener('change', draw);
+
+            // ウィンドウリサイズ時にも再描画
+            new ResizeObserver(draw).observe(canvas.parentElement);
+
+            // 初期描画
+            draw();
+        });
+    </script>
+</body>
+</html>
+
